@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>UVA WildLife Tracker</title>
+    <script
+      async
+      defer
+      src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCgKpUnUDFKDoDKiJwbWriZ7Ca4ndoOBlo&callback=initMap"
+    ></script>
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+      integrity="sha384-T3c6CoIi6uLrA9TneNEoa7RxnatzjcDSCmG1MXxSR1GAsXEV/Dwwykc2MPK8M2HN"
+      crossorigin="anonymous"
+    />
+    <style>
+      body {
+        background-color: #27ae60; /* Light green background color */
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container-fluid">
+      <div class="row justify-content-center align-items-center" style="min-height: 100vh;">
+        <div class="col-md-6">
+          <div class="card" style="padding: 20px;">
+            <h2 class="text-center">Login</h2>
+            <br>
+            <br>
+            {% load socialaccount %}
+            {% if user.is_authenticated %}
+              <a href="{% url 'activity' %}" class="btn btn-success btn-block">
+                Continue to site as {{user.username}} <span class="badge badge-light">{{user.email}}</span>
+              </a>
+              <br>
+              <br>
+              <a href="{% url 'logout' %}?next=/" class="btn btn-warning btn-block">Logout</a>
+            {% else %}
+              <a href="{% provider_login_url 'google' %}" class="btn btn-info btn-block">
+                Login with Google
+              </a>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>

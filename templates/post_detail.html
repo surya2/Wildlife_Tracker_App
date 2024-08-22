@@ -1,0 +1,341 @@
+<!--from: https://djangocentral.com/creating-comments-system-with-django/-->
+{% load static %}  
+{% load crispy_forms_tags %}
+ {% block content %}
+ <html>
+  <head>
+    <style>
+      .switch {
+        position: relative;
+        display: inline-block;
+        width: 60px;
+        height: 34px;
+      }
+      
+      .switch input { 
+        opacity: 0;
+        width: 0;
+        height: 0;
+      }
+      
+      .slider {
+        position: absolute;
+        cursor: pointer;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: #ccc;
+        -webkit-transition: .4s;
+        transition: .4s;
+      }
+      
+      .slider:before {
+        position: absolute;
+        content: "";
+        height: 26px;
+        width: 26px;
+        left: 4px;
+        bottom: 4px;
+        background-color: white;
+        -webkit-transition: .4s;
+        transition: .4s;
+      }
+      
+      input:checked + .slider {
+        background-color: #2196F3;
+      }
+      
+      input:focus + .slider {
+        box-shadow: 0 0 1px #2196F3;
+      }
+      
+      input:checked + .slider:before {
+        -webkit-transform: translateX(26px);
+        -ms-transform: translateX(26px);
+        transform: translateX(26px);
+      }
+      
+      /* Rounded sliders */
+      .slider.round {
+        border-radius: 34px;
+      }
+      
+      .slider.round:before {
+        border-radius: 50%;
+      }
+      .modal {
+        display: none;
+        position: fixed;
+        z-index: 1;
+        left: 0;
+        top: 0;
+        width: 500px;
+        height: 100%;
+        overflow: auto;
+        background-color: rgba(0,0,0,0.8);
+      }
+
+      .modal-content {
+          position: relative;
+          background-color: #fefefe;
+          margin: 10% auto;
+          padding: 20px;
+          border: 1px solid #888;
+          width: 600px;
+      }
+
+      .close-modal-btn {
+          position: absolute;
+          top: 0;
+          right: 0;
+          font-size: 28px;
+          cursor: pointer;
+          color: #ccc;
+      }
+      .custom-modal {
+        max-width: 600px !important; /* Adjust the width as needed */
+        max-height: 600px !important;
+      }
+  </style>
+    <title>UVA WildLife Tracker</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css">
+
+<!-- Bootstrap JS and Popper.js -->
+<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css">
+
+<!-- Bootstrap JS and Popper.js -->
+<script src="https://code.jquery.com/jquery-3.3.1.slim.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js"></script>
+<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js"></script>
+<script src="https://code.jquery.com/jquery-3.3.1.slim.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js"></script>
+<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js"></script>
+    <script
+      async
+      defer
+      src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCgKpUnUDFKDoDKiJwbWriZ7Ca4ndoOBlo&callback=initMap"
+    ></script>
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+      integrity="sha384-T3c6CoIi6uLrA9TneNEoa7RxnatzjcDSCmG1MXxSR1GAsXEV/Dwwykc2MPK8M2HN"
+      crossorigin="anonymous"
+    />
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons"
+      rel="stylesheet">
+  </head>
+<body>
+  <script>
+    $(document).ready(function () {
+      $.ajax({
+        url: "{% url 'mydata'%}",
+        method: "GET",
+        success: function (data) {
+          console.log(data);
+          initMap(data);
+        },
+      });
+    });
+
+    $(document).ready(function() {
+      // Show the Save Success Modal
+      $('#saveSuccessModal').modal('show');
+  
+      // Show the Unsave Success Modal (assuming you want to show it by default)
+      $('#unsaveSuccessModal').modal('show');
+    });
+
+    function getRandomInt(min, max) {
+      return Math.floor(Math.random() * (max - min)) + min;
+    }
+
+    function toggleAnonymous() {
+      anonymous_names = ["Lion", "Tiger", "Elephant", "Giraffe", "Zebra", "Monkey", "Kangaroo", "Panda", "Dolphin", "Koala"];
+      var x = document.getElementById("anonSlider");
+      if (x.innerHTML === "Posting as {{ user.username }}") {
+        var randomIndex = getRandomInt(0, anonymous_names.length);
+        var randomAnimal = anonymous_names[randomIndex];
+        x.innerHTML = "Posting anonymously";
+        document.getElementById("post_name").innerHTML = "Anonymous"+randomAnimal;
+      } else {
+        x.innerHTML = "Posting as {{ user.username }}";
+        document.getElementById("post_name").innerHTML = "{{ user.username }}";
+      }
+    }
+    function initMap(data) {
+      const map = new google.maps.Map(document.getElementById("map"), {
+        zoom: parseInt("{{ zoom }}"),
+        center: { lat: parseFloat("{{ latitude }}"), lng: parseFloat("{{ longitude }}") },
+      });
+      const marker = new google.maps.Marker({
+        position: { lat: parseFloat("{{latitude}}"), lng: parseFloat("{{longitude}}") },
+        map: map,
+      });
+      marker.setMap(map);
+      if("{{ post_select }}" == "True"){
+        const centerPostRedirect = document.createElement("div");
+        const centerPostBtn = createCenterControl(map);
+        //const saveBtn = createSaveButton(map);
+        centerPostRedirect.appendChild(centerPostBtn);
+        //centerPostRedirect.appendChild(saveBtn);
+        map.controls[google.maps.ControlPosition.TOP_CENTER].push(centerPostRedirect);
+      }
+    }
+  </script>
+  {% load extras %}
+  {% show_navbar is_admin %}
+  <div class="container" style="margin-top:70px; margin-bottom:20px; padding:10px;">
+    <div class="row">
+      <div class="jumbotron bg-success-subtle text-black" style="position:relative; padding:40px; border-radius: 50px 15px 30px 5px;">
+        {%if post.approval_status == 1%}
+          <div class="alert alert-warning" role="alert" style="position: absolute; top: 10px; right: 10px; width:auto;">
+            <span class="glyphicon glyphicon-exclamation-sign"></span> Post is <b>Pending</b> Admin Approval - not yet viewable by other users
+          </div>
+        {%endif%}
+        {%if post.approval_status == 0%}
+          <div class="alert alert-danger" role="alert" style="position: absolute; top: 10px; right: 10px;">
+            <span class="glyphicon glyphicon-exclamation-sign"></span> Post was <b>Declined</b> by Admin &nbsp;<button type="button" id="btn-{{post.id}}" data-post-id="{{ post.id }}" data-toggle="modal" data-target="#modal-{{ post.id }}" class="btn btn-outline-dark"><svg xmlns="http://www.w3.org/2000/svg" height="16" width="10" viewBox="0 0 320 512"><!--!Font Awesome Free 6.5.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free Copyright 2023 Fonticons, Inc.--><path d="M80 160c0-35.3 28.7-64 64-64h32c35.3 0 64 28.7 64 64v3.6c0 21.8-11.1 42.1-29.4 53.8l-42.2 27.1c-25.2 16.2-40.4 44.1-40.4 74V320c0 17.7 14.3 32 32 32s32-14.3 32-32v-1.4c0-8.2 4.2-15.8 11-20.2l42.2-27.1c36.6-23.6 58.8-64.1 58.8-107.7V160c0-70.7-57.3-128-128-128H144C73.3 32 16 89.3 16 160c0 17.7 14.3 32 32 32s32-14.3 32-32zm80 320a40 40 0 1 0 0-80 40 40 0 1 0 0 80z"/></svg></button></a>
+          </div>
+        {%endif%}
+        <h1 class="display-4">{% block title %} {{ post.title }} {% endblock title %}</h1>
+        <p class="lead">Wildlife Name: {{ post.wildlife.name }}</p>
+        <p class="lead">Wildlife Address: {{ post.wildlife.address }}</p>
+        <hr class="my-4" style="height:1px;border:none;color:#5e5656;background-color:#5e5656;">
+        <p>{{post.user.name}}</p>
+        <p>{{post.body}}</p>
+        <br>
+        <p class="lead">
+          <!-- <a class="btn btn-primary btn-lg" href="#" role="button">Check Map</a> -->
+          <button id="btn-map" data-post-id="modal_map" type="button" class="btn btn-primary btn-sm open-modal-btn" data-toggle="modal" data-target="#modal-map">Check Location Map</button>
+        </p>
+
+        <div class="modal fade" id="modal-map" role="dialog">
+          <div class="modal-dialog modal-sm vertical-align-center custom-modal" style="width:1000px;">
+            <div class="modal-content">
+              <div class="modal-header">
+                <h4 class="modal-title">Map of <b>{{post.wildlife.name}}</b></h4>
+              </div>
+              <div class="modal-body">
+                <p>{{ post.wildlife.address }}</p>
+                <div class="col-sm" style="height:500px;">
+                  <div class="pageholder">
+                      <div class="titleholder">
+                      </div>
+                    
+                      <div class="linkholder">
+                        <div class="mapholder">
+                          <div class="card" id="map" style="width: 100%; height: 100%;"></div>
+                          <script
+                            src="https://maps.googleapis.com/maps/api/js?key={{key}}&callback=initMap&v=weekly"
+                            defer
+                          ></script>
+                        </div>
+                      </div>
+                    </div>
+                </div>
+                </div>
+              </div>
+          </div>
+        </div>
+
+        <a href="{% url 'react' post.id 'like' %}" type="button" class="btn" style="position: absolute; bottom: 20px; right: 90px;">
+          <svg xmlns="http://www.w3.org/2000/svg" height="16" width="16" viewBox="0 0 512 512"><!--!Font Awesome Free 6.5.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free Copyright 2023 Fonticons, Inc.--><path d="M313.4 32.9c26 5.2 42.9 30.5 37.7 56.5l-2.3 11.4c-5.3 26.7-15.1 52.1-28.8 75.2H464c26.5 0 48 21.5 48 48c0 18.5-10.5 34.6-25.9 42.6C497 275.4 504 288.9 504 304c0 23.4-16.8 42.9-38.9 47.1c4.4 7.3 6.9 15.8 6.9 24.9c0 21.3-13.9 39.4-33.1 45.6c.7 3.3 1.1 6.8 1.1 10.4c0 26.5-21.5 48-48 48H294.5c-19 0-37.5-5.6-53.3-16.1l-38.5-25.7C176 420.4 160 390.4 160 358.3V320 272 247.1c0-29.2 13.3-56.7 36-75l7.4-5.9c26.5-21.2 44.6-51 51.2-84.2l2.3-11.4c5.2-26 30.5-42.9 56.5-37.7zM32 192H96c17.7 0 32 14.3 32 32V448c0 17.7-14.3 32-32 32H32c-17.7 0-32-14.3-32-32V224c0-17.7 14.3-32 32-32z"/></svg> <span class="badge rounded-pill bg-primary">{{num_likes}}</span>
+        </a>
+        <a href="{% url 'react' post.id 'dislike' %}" type="button" class="btn" style="position: absolute; bottom: 20px; right: 20px;">
+          <svg xmlns="http://www.w3.org/2000/svg" height="16" width="16" viewBox="0 0 512 512"><!--!Font Awesome Free 6.5.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free Copyright 2023 Fonticons, Inc.--><path d="M313.4 479.1c26-5.2 42.9-30.5 37.7-56.5l-2.3-11.4c-5.3-26.7-15.1-52.1-28.8-75.2H464c26.5 0 48-21.5 48-48c0-18.5-10.5-34.6-25.9-42.6C497 236.6 504 223.1 504 208c0-23.4-16.8-42.9-38.9-47.1c4.4-7.3 6.9-15.8 6.9-24.9c0-21.3-13.9-39.4-33.1-45.6c.7-3.3 1.1-6.8 1.1-10.4c0-26.5-21.5-48-48-48H294.5c-19 0-37.5 5.6-53.3 16.1L202.7 73.8C176 91.6 160 121.6 160 153.7V192v48 24.9c0 29.2 13.3 56.7 36 75l7.4 5.9c26.5 21.2 44.6 51 51.2 84.2l2.3 11.4c5.2 26 30.5 42.9 56.5 37.7zM32 384H96c17.7 0 32-14.3 32-32V128c0-17.7-14.3-32-32-32H32C14.3 96 0 110.3 0 128V352c0 17.7 14.3 32 32 32z"/></svg> <span class="badge rounded-pill bg-warning">{{num_dislikes}}</span>
+        </a>
+        {% if user.is_authenticated %}
+            {% if saved %}
+              <form method="post" action="{% url 'save_post' post.id post.wildlife.id %}" style="position: absolute; bottom: 20px; right: 100px;">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-primary" data-toggle="modal" data-target="#saveSuccessModal"><i class="fa fas-bookmark-o"></i></button>
+              </form>
+            {% else %}
+              <!-- Unsave Post button -->
+              <!-- <form method="post" action="{% url 'save_post' post.id post.wildlife.id %}" style="position: absolute; bottom: 20px; right: 190px;">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-danger" data-toggle="modal" data-target="#unsaveSuccessModal"><i class="fa fas-bookmark"></i></button>
+              </form> -->
+            {% endif %}
+        {% endif %}
+        <!-- <div class="btn-group" role="group" aria-label="Basic example" style="position: absolute; bottom: 20px; right: 20px;">
+          <a href="{% url 'react' post.id 'like' %}" type="button" class="btn"><span class="glyphicon glyphicon-thumbs-up"></span> <span class="badge rounded-pill bg-primary">{{num_likes}}</span></a>
+          <a href="{% url 'react' post.id 'dislike' %}" type="button" class="btn"><span class="glyphicon glyphicon-thumbs-down"></span> <span class="badge rounded-pill bg-warning">{{num_dislikes}}</span></a>
+        </div> -->
+        <div class="modal fade" id="modal-{{ post.id }}" role="dialog">
+          <div class="modal-dialog modal-sm vertical-align-center custom-modal" style="width:1000px;">
+            <div class="modal-content">
+              <div class="modal-header">
+                <h4 class="modal-title">Admin Decline Reason</b></h4>
+                <button type="button" data-dismiss="modal" class="btn btn-default" style="position:absolute; top: 2px; right: -2px;"><svg xmlns="http://www.w3.org/2000/svg" height="16" width="16" viewBox="0 0 512 512"><!--!Font Awesome Free 6.5.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free Copyright 2023 Fonticons, Inc.--><path d="M256 512A256 256 0 1 0 256 0a256 256 0 1 0 0 512zM175 175c9.4-9.4 24.6-9.4 33.9 0l47 47 47-47c9.4-9.4 24.6-9.4 33.9 0s9.4 24.6 0 33.9l-47 47 47 47c9.4 9.4 9.4 24.6 0 33.9s-24.6 9.4-33.9 0l-47-47-47 47c-9.4 9.4-24.6 9.4-33.9 0s-9.4-24.6 0-33.9l47-47-47-47c-9.4-9.4-9.4-24.6 0-33.9z"/></svg></button>
+              </div>
+              <div class="modal-body">
+                <p>{{post.decline_reason}}</p>
+                </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-8 card mb-4  mt-3 ">
+        <div class="card-body">
+          <!-- comments --> 
+        <h2>{{ count }} comments</h2>
+          {% for comment in comments %}
+            <div class="panel-body" style="padding: 10px; position:relative;">
+              <p class="font-weight-bold"> 
+              {{ comment.posting_name }}
+                <span class=" text-muted font-weight-normal">
+                  {{ comment.updated_at }}
+                </span>
+              </p>
+              <a href="" type="button" class="btn-outline-danger" style="position: absolute; top: 10px; right: 10px;"><span class="glyphicon glyphicon-exclamation-sign"></span> Report Comment</a>
+              <!-- <button type="button" class="btn-outline-danger" style="position: absolute; top: 10px; right: 10px;"><span class="glyphicon glyphicon-exclamation-sign"></span> Report Comment</a> -->
+              <hr class="my-4" style="height:1px;border:none;color:#5e5656;background-color:#5e5656;">
+              {{ comment.body | linebreaks }}
+            </div>
+            <br>
+          {% endfor %}
+        </div> 
+    </div>
+      <div class="col-md-8 card mb-4  mt-3 ">
+        <div class="card-body">
+          {% if new_comment %}
+            <div class="alert alert-success" role="alert">
+              Your comment is awaiting moderation
+            </div>
+          {% else %}
+          <h3>Leave a comment</h3>
+          <div style="position: absolute; top: 22px; right: 20px;">
+            <div class="custom-control custom-switch">
+              <input onclick="toggleAnonymous()" type="checkbox" class="custom-control-input" id="customSwitches">
+              <label id="anonSlider" class="custom-control-label" for="customSwitches">Posting as {{user.username}}</label>
+            </div>
+          </div>
+          <form method="POST" style="margin-top: 1.3em;">
+            <!-- {{ comment_form.as_p }} originally {{ comment_form.as_p }} -->
+            <textarea class="form-control" name="comment" rows="3"></textarea>
+            {% csrf_token %}
+            <b></b>
+            <br>
+            <textarea hidden name="posting_name" id="post_name">{{ user.username }}</textarea>
+            {% if post.approval_status == 0%}
+              <button disabled type="submit" class="btn btn-success  btn-lg">Submit</button>
+            {% endif %}
+            {% if post.approval_status == 1%}
+              <button disabled type="submit" class="btn btn-success  btn-lg">Submit</button>
+            {% endif %}
+            {% if post.approval_status == 2%}
+              <button type="submit" class="btn btn-success  btn-lg">Submit</button>
+            {% endif %}
+          </form>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+<!-- Save Success Modal -->
+</body>
+ </html>
+{% endblock content %}

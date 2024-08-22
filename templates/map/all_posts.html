@@ -1,0 +1,135 @@
+{% extends 'map/base.html' %} {% block content %} 
+{% load static %}
+<link
+rel="stylesheet"
+href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/css/bootstrap.min.css"
+integrity="sha384-rbsA2VBKQhggwzxH7pPCaAqO46MgnOM80zW1RWuH61DGLwZJEdK2Kadq2F9CUG65"
+crossorigin="anonymous"
+/>
+<link
+href="https://fonts.googleapis.com/icon?family=Material+Icons"
+rel="stylesheet"
+/>
+<script>
+  $(document).ready(function () {
+    $.ajax({
+      url: "{% url 'mydata'%}",
+      method: "GET",
+      success: function (data) {
+        console.log(data);
+        initMap(data);
+      },
+    });
+  });
+
+  function createCenterControl(map) {
+    const controlButton = document.createElement("button");
+    // Set CSS for the control.
+    controlButton.style.backgroundColor = "#20c997";
+    controlButton.style.border = "2px solid #2d2e2c";
+    controlButton.style.borderRadius = "3px";
+    controlButton.style.boxShadow = "0 2px 6px rgba(0,0,0,.3)";
+    controlButton.style.color = "rgb(25,25,25)";
+    controlButton.style.cursor = "pointer";
+    controlButton.style.fontFamily = "Helvetica Neue,Helvetica,Arial,sans-serif";
+    controlButton.style.fontSize = "18px";
+    controlButton.style.lineHeight = "38px";
+    controlButton.style.margin = "8px 0 22px";
+    controlButton.style.padding = "0 5px";
+    controlButton.style.textAlign = "center";
+    controlButton.textContent = "See This Post 🔭";
+    controlButton.title = "Click to recenter the map";
+    controlButton.type = "button";
+    // Setup the click event listeners: simply set the map to Chicago.
+    controlButton.addEventListener("click", () => {
+      window.location.href = window.location.href+"post_detail/";
+    });
+    // Setup the click event listeners: simply set the map to Chicago.
+    return controlButton;
+  }
+
+  function initMap(data) {
+    const map = new google.maps.Map(document.getElementById("map"), {
+      zoom: parseInt("{{ zoom }}"),
+      center: { lat: parseFloat("{{ latitude }}"), lng: parseFloat("{{ longitude }}") },
+    });
+    const markers = data?.map((i) => {
+      console.log(i.latitude, i.longitude);
+      const marker = new google.maps.Marker({
+        position: { lat: parseFloat(i.latitude), lng: parseFloat(i.longitude) },
+        map: map,
+      });
+    });
+    if("{{ post_select }}" == "True"){
+      const centerPostRedirect = document.createElement("div");
+      const centerPostBtn = createCenterControl(map);
+      centerPostRedirect.appendChild(centerPostBtn);
+      map.controls[google.maps.ControlPosition.TOP_CENTER].push(centerPostRedirect);
+    }
+  }
+</script>
+{% load extras %}
+{% show_navbar is_admin %}
+<div class="container" style="margin-top:70px; margin-bottom:20px; padding:10px;">
+    <div class="row">
+      <div class="col-sm">
+        <div class="card" style="width: 100%; height: 800px">
+            <div class="card-header">
+              All Posts
+            </div>
+            <div class="card-body">
+              {% if all_postings %}
+              <div class="list-group">
+                {% for post in all_postings %}
+                  <div class="col-md-11">
+                    <div class="element" style="width:550px;">
+                      <!-- Your second element content here -->
+                      <a href="{% url 'handle_post' post.id post.wildlife.id %}" class="list-group-item list-group-item-action flex-column align-items-start">
+                        <div class="d-flex w-100 justify-content-between">
+                          <h5 class="mb-1">{{ post.title }}</h5>
+                          <small>{{post.created_at}}</small>
+                        </div>
+                        <p>Wildlife name: {{post.wildlife.name}}</p>
+                        <small>{{post.user.name}}</small>
+                        <!-- <a href="{% url 'save' post.id %}" type="button" class="btn btn-info btn-sm" style="position:absolute; bottom: 10px; right: 10px;"><i id="saved" class="fas fa-bookmark"></i></a>
+                        <button href="{% url 'save' post.id %}" type="button" class="btn btn-info btn-sm" style="position:absolute; bottom: 10px; right: 10px;"><i id="saved" class="fas fa-bookmark"></i></button> -->
+                      </a>
+                    </div>
+                  </div>
+                  <div class="col-md-12">
+                    <div class="element">
+                      <!-- Your first element content here -->
+                      {% if post in saved_posts %}
+                          <a href="{% url 'unsave' post.id %}" type="button" class="btn btn-info btn-sm" style="position:absolute; bottom: 40px; right: 0px;"><i id="saved" class="fas fa-bookmark"></i></a>
+                      {% else %}
+                          <a href="{% url 'save' post.id %}" type="button" class="btn btn-info btn-sm save" style="position:absolute; bottom: 40px; right: 0px;"><i id="not-saved" class="far fa-bookmark"></i></a>
+                      {% endif %}
+                    </div>
+                  </div>
+                {% endfor %}
+              </div>
+              {% else %}
+                  <p>No posts are available.</p>
+              {% endif %}
+          </div>
+          </div>
+      </div>
+      <div class="col-sm">
+        <div class="pageholder">
+            <div class="titleholder">
+            </div>
+          
+            <div class="linkholder">
+              <div class="mapholder">
+                <div class="card" id="map" style="width: 100%; height: 800px"></div>
+                <script
+                  src="https://maps.googleapis.com/maps/api/js?key={{key}}&callback=initMap&v=weekly"
+                  defer
+                ></script>
+              </div>
+            </div>
+          </div>
+      </div>
+    </div>
+  </div>
+{% endblock content %}

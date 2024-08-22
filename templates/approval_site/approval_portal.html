@@ -1,0 +1,116 @@
+<style>
+  .modal {
+    display: none;
+    position: fixed;
+    z-index: 1;
+    left: 0;
+    top: 0;
+    width: 500px;
+    height: 100%;
+    overflow: auto;
+    background-color: rgba(0,0,0,0.8);
+}
+
+.modal-content {
+    position: relative;
+    background-color: #fefefe;
+    margin: 10% auto;
+    padding: 20px;
+    border: 1px solid #888;
+    width: 600px;
+}
+
+.close-modal-btn {
+    position: absolute;
+    top: 0;
+    right: 0;
+    font-size: 28px;
+    cursor: pointer;
+    color: #ccc;
+}
+.custom-modal {
+    max-width: 600px !important; /* Adjust the width as needed */
+    max-height: 600px !important;
+  }
+</style>
+<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css">
+
+<!-- Bootstrap JS and Popper.js -->
+<script src="https://code.jquery.com/jquery-3.3.1.slim.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js"></script>
+<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js"></script>
+<script>
+  const openModalButtons = document.querySelectorAll('.open-modal-btn');
+  const closeModalButtons = document.querySelectorAll('.close-modal-btn');
+
+  openModalButtons.forEach(button => {
+        button.addEventListener('click', () => {
+            const postId = button.getAttribute('data-post-id');
+            const modal = document.getElementById(`modal-${postId}`);
+            modal.style.display = 'block';
+        });
+    });
+
+    // Add click event listeners to close modals
+    closeModalButtons.forEach(button => {
+        button.addEventListener('click', () => {
+            const postId = button.getAttribute('data-post-id');
+            const modal = document.getElementById(`modal-${postId}`);
+            modal.style.display = 'none';
+        });
+    });
+</script>
+{% extends 'map/base.html' %} {% block content %} {% load static %}
+{% load extras %}
+{% show_navbar is_admin %}
+<div style="margin-top:70px; margin-bottom:20px; padding:10px; margin-left:40px; margin-left:40px; margin-top:100px;">
+{% if posts %}
+<div>
+    <div class="row row-cols-5 row-cols-md-2">
+    {% for post in posts %}
+    <div class="card" style="width: 350px; height:auto; position: relative; margin:10px;">
+        <img src="media/{{post.wildlife.image}}" class="card-img-top" alt="...">
+        <div class="card-body">
+          <h5 class="card-title">{{post.title}}</h5>
+          <h7 class="card-title">Wildlife: {{post.wildlife.name}}</h7>
+          <br>
+          <p class="card-text">{{post.body}}</p>
+        </div>
+        <div class="card-footer">
+          <small class="text-muted">{{post.updated_at}}</small>
+          <div class="btn-group" role="group" aria-label="Basic example" style="position: absolute; bottom: 8px; right: 8px;">
+            <a href="{% url 'approve_post' post.id %}" type="button" class="btn btn-success btn-sm" style="display: flex; justify-content: center; align-items: center;">&nbsp;&nbsp;<i class="fas fa-check-circle mr-2"></i></a>
+            <button id="btn-{{post.id}}" data-post-id="{{ post.id }}" type="button" class="btn btn-danger btn-sm open-modal-btn" data-toggle="modal" data-target="#modal-{{ post.id }}">&nbsp;&nbsp;<i class="fas fa-times-circle mr-2"></i></button>
+          </div>
+        </div>
+    </div>
+    <div class="modal fade" id="modal-{{ post.id }}" role="dialog">
+      <div class="modal-dialog modal-sm vertical-align-center custom-modal" style="width:1000px;">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h4 class="modal-title">Why Decline <b>{{post.title}}?</b></h4>
+          </div>
+          <div class="modal-body">
+              <button type="button" data-dismiss="modal" class="btn btn-default" style="position:absolute; top: 10px; right: 10px;"><svg xmlns="http://www.w3.org/2000/svg" height="16" width="16" viewBox="0 0 512 512"><!--!Font Awesome Free 6.5.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free Copyright 2023 Fonticons, Inc.--><path d="M256 512A256 256 0 1 0 256 0a256 256 0 1 0 0 512zM175 175c9.4-9.4 24.6-9.4 33.9 0l47 47 47-47c9.4-9.4 24.6-9.4 33.9 0s9.4 24.6 0 33.9l-47 47 47 47c9.4 9.4 9.4 24.6 0 33.9s-24.6 9.4-33.9 0l-47-47-47 47c-9.4 9.4-24.6 9.4-33.9 0s-9.4-24.6 0-33.9l47-47-47-47c-9.4-9.4-9.4-24.6 0-33.9z"/></svg></button>
+              <form method="POST">
+                {% csrf_token %}
+                <div class="input-group">
+                  <div class="input-group-prepend">
+                    <span class="input-group-text">Reason</span>
+                  </div>
+                  <textarea name="decline_reason" class="form-control" aria-label="With textarea"></textarea>
+                </div>
+                <textarea hidden name="postid" class="form-control" aria-label="With textarea">{{post.id}}</textarea>
+                <button type="submit" class="btn btn-danger btn-sm" style="position: absolute; bottom: -6px; right: 10px;">Decline</a>
+              </form>
+            </div>
+      </div>
+  </div>
+    {% endfor %}
+    </div>
+{% else %}
+    <p>No posts are available.</p>
+{% endif %}
+</div>
+{% endblock content %}
+</div>
